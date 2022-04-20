@@ -4,15 +4,24 @@ const Unauthenticated = require("../errors/unauthenticated")
 const { StatusCodes } = require("http-status-codes");
 const BadRequestError = require("../errors/bad-request");
 const customApiError = require("../errors/customapi");
+const upload = require('../middleware/upload')
+
 
 //update user
-router.patch("/:id", async (req, res) => {
+router.patch("/:id",upload.single('image'), async (req, res) => {
     const id = req.params.id
     if(req.user.userId === id || req.user.isAdmin) {
         console.log(req.user.userId)
-        const user = await User.findByIdAndUpdate(req.user.userId, {
-          $set: req.body
-        }, {new:true})
+        if(req.file.buffer) {
+            const user = await User.findByIdAndUpdate(req.user.userId, {
+                $set: {img:{data: req.file.buffer, contentType: 'image/jpg'},...req.body}
+              }, {new:true})
+        }
+        else {
+            const user = await User.findByIdAndUpdate(req.user.userId, {
+                $set: req.body
+              }, {new:true})
+        }
         return res.status(StatusCodes.OK).json({msg: 'account updated', user})
     }
     throw new Unauthenticated('unauthenticated')
