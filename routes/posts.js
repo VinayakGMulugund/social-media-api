@@ -7,6 +7,7 @@ const upload = require('../middleware/upload')
 
 //create a post
 router.post("/", upload.single('image'), async (req, res) => {
+  console.log(req.file)
   const newPost = await Post.create({userId: req.user.userId,img:{data: req.file.buffer, contentType: 'image/jpg'},...req.body})
   res.status(StatusCodes.ACCEPTED).json(newPost)
 })
@@ -59,18 +60,20 @@ router.get("/:id", async (req, res) => {
 
 
 
-//get my posts
-router.get("/myPosts", async (req, res) => {
-    const posts = await Post.find({_id: req.user.userId})
-    res.status(200).json(posts)
+//timeline posts
+router.get("/timeline/all", async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.userId);
+    const userPosts = await Post.find({ userId: currentUser._id })
+    const friendPosts = await Promise.all(
+      currentUser.followings.map((friendId) => {
+        return Post.find({ userId: friendId })
+      })
+    );
+    res.json(userPosts.concat(...friendPosts))
+  } catch (err) {
+    res.status(500).json(err)
+  }
 })
-
-
-//get friend posts
-router.get('/friendPosts/:id', async (req,res)=>{
-    const posts = await Post.find({_id: req.params.id})
-    res.status(200).json(posts)
-})
-
 
 module.exports = router;
